@@ -18,10 +18,16 @@ import torch.autograd as autograd
 import torch
 
 from matplotlib import pyplot
+
+# Distributed Data Parallel
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
+
 #%%
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=201, help="number of epochs of training")
-parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+parser.add_argument("--batch_size", type=int, default=64*4, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
@@ -38,6 +44,12 @@ print(opt)
 img_shape = (opt.channels, opt.img_size, opt.img_size)
 
 cuda = True if torch.cuda.is_available() else False
+
+def setupDDP(rand, world_size):
+    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+
+def cleanup():
+    dist.destroy_process_group()
 
 #%%
 class Generator(nn.Module):
@@ -88,9 +100,9 @@ generator = Generator()
 discriminator = Discriminator()
 
 if cuda:
-    #generator = nn.DataParallel(generator)
+    generator = nn.DataParallel(generator)
     generator.cuda()
-    #discriminator = nn.DataParallel(discriminator)
+    discriminator = nn.DataParallel(discriminator)
     discriminator.cuda()
 
 #%% Configure data loader
@@ -196,7 +208,8 @@ for epoch in range(opt.n_epochs):
 
             batches_done += opt.n_critic
 
-    if epoch % opt.sample_interval == 0:
+    #if epoch % opt.sample_interval == 0:
+    if epoch % 1 == 0:
         pyplot.figure()
         show(make_grid(fake_imgs.data[:25], nrow = 5, normalize=True))
         pyplot.title(
@@ -204,4 +217,5 @@ for epoch in range(opt.n_epochs):
         )
         pyplot.show()
 
+cleanup()
 # %%
