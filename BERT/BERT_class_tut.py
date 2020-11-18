@@ -137,7 +137,7 @@ input_ids = [tokenizer.convert_tokens_to_ids(x) for x in tokenized_texts]
 # `pad_sequences()` transforms a list of num_samples sequences (lists of integers) 
 ## into a 2D Numpy array of shape (num_samples, num_timesteps)
 input_ids = pad_sequences(input_ids, maxlen=MAX_LEN, dtype="long", truncating="post", padding="post")
-
+print(input_ids[0])
 # %%
 # Create attention masks
 attention_masks = []
